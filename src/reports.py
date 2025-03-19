@@ -28,11 +28,10 @@ def report_to_file(filename=None):
             result = func(*args, **kwargs)
             output_filename = filename or f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-            if isinstance(result, pd.DataFrame):
-                result = result.to_dict(orient='records')
+            info_to_write = result.to_dict(orient='records') if isinstance(result, pd.DataFrame) else result
 
             with open(output_filename, "w", encoding="utf-8") as f:
-                json.dump(result, f, ensure_ascii=False, indent=4)
+                json.dump(info_to_write, f, ensure_ascii=False, indent=4)
 
             logger.info(f"Отчет сохранен в {output_filename}")
             return result
@@ -46,12 +45,13 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
     if date is None:
         date = datetime.now().strftime('%Y-%m-%d')
     end_date = datetime.strptime(date, '%Y-%m-%d')
-    start_date = end_date - timedelta(days=90)
+    start_date = end_date - pd.DateOffset(months=3)
     logger.debug(f"Фильтруем данные по категории: {category}, с {start_date} по {end_date}")
     filtered_data = transactions[
         (transactions['Категория'] == category) &
         (transactions['Дата платежа'] >= start_date.strftime('%Y-%m-%d')) &
-        (transactions['Дата платежа'] <= end_date.strftime('%Y-%m-%d'))
+        (transactions['Дата платежа'] <= end_date.strftime('%Y-%m-%d')) &
+        (transactions['Сумма операции'] < 0)
         ]
     logger.debug(f"Найдено {len(filtered_data)} записей по категории {category}.")
     return filtered_data
