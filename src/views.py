@@ -1,25 +1,44 @@
-from datetime import datetime
-from src.utils import get_date
+import json
+
+import pandas as pd
+
+from src.utils import (common_cards_info, exchange_rate, get_date, greeting, path_excel, path_json, reader_excel,
+                       stock_price, top_five_transactions)
 
 
-def greeting(time_str: str) -> str:
-    """Функция приветствует пользователя, выбирая «Доброе утро» /
-    «Добрый день» / «Добрый вечер» / «Доброй ночи» в зависимости
-    от текущего времени"""
-    try:
-        parsed_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
-        hour = parsed_time.hour
-        if 5 <= hour <= 12:
-            return "Доброе утро"
-        elif 13 <= hour <= 18:
-            return "Добрый день"
-        elif 19 <= hour <= 23:
-            return "Добрый вечер"
-        else:
-            return "Доброй ночи"
-    except ValueError:
-        return "Ошибка: неверный формат даты и времени"
+def get_main_page_info(transactions: pd.DataFrame, date: str):
+    """Главная функция объединяет все функции из utils и выводит результат
+    в формате JSON"""
+    cards_info = common_cards_info(transactions).to_dict(orient="records")
+    transactions_info = (
+        top_five_transactions(transactions)
+        .rename(
+            columns={
+                "Дата платежа": "date",
+                "Сумма платежа": "amount",
+                "Категория": "category",
+                "Описание": "description",
+            }
+        )
+        .to_dict(orient="records")
+    )
+    currency_rates = exchange_rate(path_json)
+    stock_prices = stock_price(path_json)
+
+    result = {
+        "cards": cards_info,
+        "top_transactions": transactions_info,
+        "currency_rates": [{"currency": key, "rate": value} for key, value in currency_rates.items()],
+        "stock_prices": [{"stock": key, "price": value} for key, value in stock_prices.items()],
+    }
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-current_time = get_date()
-print(greeting(current_time))
+if __name__ == "__main__":
+    current_time = get_date()
+    greet = greeting(current_time)
+    print(greet)
+    transactions_df = reader_excel(path_excel)
+    date = "2021-09-11"
+    result_json = get_main_page_info(transactions_df, date)
+    print(result_json)

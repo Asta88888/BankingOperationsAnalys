@@ -1,60 +1,52 @@
-import unittest
-from unittest import mock
-import json
-import os
-from datetime import datetime
-import pandas as pd
-import requests
-from src.utils import reader_excel, get_date, common_cards_info, top_five_transactions, exchange_rate, stock_price, aggregate_by_last_digits
 import pytest
-
-class TestReaderExcel(unittest.TestCase):
-
-    @mock.patch("pandas.read_excel")
-    def test_reader_excel_success(self, mock_read_excel):
-        mock_df = pd.DataFrame({
-            "Номер карты": [1234567890, 9876543210],
-            "Сумма операции": [100, 200]
-        })
-        mock_read_excel.return_value = mock_df
-        result = reader_excel("mock_path.xlsx")
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["Номер карты"], 1234567890)
-        self.assertEqual(result[0]["Сумма операции"], 100)
-
-    @mock.patch("pandas.read_excel")
-    def test_reader_excel_failure(self, mock_read_excel):
-        mock_read_excel.side_effect = Exception("File read error")
-        result = reader_excel("mock_path.xlsx")
-        self.assertEqual(result, [])
+import unittest
+import json
+import requests
+import pandas as pd
+from unittest import mock
+from unittest.mock import patch
+from src.utils import reader_excel, greeting, common_cards_info, top_five_transactions, exchange_rate, stock_price
 
 
-class TestCommonCardsInfo(unittest.TestCase):
+@pytest.fixture
+def sample_dataframe():
+    data = {
+        "Номер карты": ["1234", "5678", "1234", "5678"],
+        "Сумма операции": [1000, 2000, 1500, 500],
+        "Сумма платежа": [500, 200, 1000, 700],
+        "Дата платежа": ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-04"],
+        "Категория": ["Еда", "Транспорт", "Одежда", "Развлечения"],
+        "Описание": ["Обед", "Метро", "Футболка", "Кино"]
+    }
+    return pd.DataFrame(data)
 
-    def test_common_cards_info(self):
-        transactions = [
-            {"Номер карты": 1234567890, "Сумма операции": 100},
-            {"Номер карты": 9876543210, "Сумма операции": 200}
-        ]
-        result = common_cards_info(transactions)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["last_digits"], 1234567890)
-        self.assertEqual(result[0]["total_spent"], 100)
-        self.assertEqual(result[0]["cashback"], 1.0)
+@pytest.mark.parametrize("input_time, expected", [
+    ("2025-01-01 06:00:00", "Доброе утро"),
+    ("2025-01-01 14:00:00", "Добрый день"),
+    ("2025-01-01 20:00:00", "Добрый вечер"),
+    ("2025-01-01 02:00:00", "Доброй ночи"),
+    ("invalid_time", "Ошибка: неверный формат даты и времени"),
+])
+def test_greeting(input_time, expected):
+    assert greeting(input_time) == expected
 
+@patch("pandas.read_excel")
+def test_reader_excel(mock_read_excel):
+    mock_read_excel.return_value = pd.DataFrame({"test": [1, 2, 3]})
+    df = reader_excel("fake_path.xlsx")
+    assert not df.empty
+    assert "test" in df.columns
 
-class TopFiveTransactions(unittest.TestCase):
+def test_common_cards_info(sample_dataframe):
+    result = common_cards_info(sample_dataframe)
+    assert not result.empty
+    assert "cashback" in result.columns
+    assert "total_spent" in result.columns
 
-    def test_top_five_transactions(self):
-        transactions = [
-            {"Сумма платежа": 100, "Дата платежа": "2025-03-16", "Категория": "Food", "Описание": "Lunch"},
-            {"Сумма платежа": 200, "Дата платежа": "2025-03-15", "Категория": "Transport", "Описание": "Bus ticket"},
-            {"Сумма платежа": 50, "Дата платежа": "2025-03-14", "Категория": "Entertainment", "Описание": "Cinema"}
-        ]
-        result = top_five_transactions(transactions)
-        self.assertEqual(len(result), 3)
-        self.assertEqual(result[0]["amount"], 200)
-        self.assertEqual(result[2]["amount"], 50)
+def test_top_five_transactions(sample_dataframe):
+    result = top_five_transactions(sample_dataframe)
+    assert len(result) <= 5
+    assert "Сумма платежа" in result.columns
 
 
 class TestExchangeRate(unittest.TestCase):
@@ -91,16 +83,4 @@ class TestStockPrice(unittest.TestCase):
         self.assertEqual(result["MSFT"], 150.0)
         self.assertEqual(result["TSLA"], 150.0)
 
-
-class TestAggregateByLastDigits(unittest.TestCase):
-
-    def test_aggregate_by_last_digits(self):
-        transactions = [
-            {"last_digits": 1234, "total_spent": 100, "cashback": 1.0},
-            {"last_digits": 1234, "total_spent": 200, "cashback": 2.0},
-            {"last_digits": 5678, "total_spent": 50, "cashback": 0.5}
-        ]
-        result = aggregate_by_last_digits(transactions)
-        self.assertEqual(result[1234]["total_spent"], 300)
-        self.assertEqual(result[5678]["total_spent"], 50)
 

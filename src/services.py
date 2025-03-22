@@ -1,12 +1,15 @@
 import json
+import logging
+import math
+import os
 from collections import defaultdict
 from datetime import datetime
-import math
 from functools import reduce
 from typing import Any
-from src.utils import reader_excel, path_excel
-import logging
-import os
+
+import pandas as pd
+
+from src.utils import path_excel
 
 log_dir = "../logs"
 os.makedirs(log_dir, exist_ok=True)
@@ -20,8 +23,20 @@ logger.setLevel(logging.DEBUG)
 logger.debug("Debug message")
 
 
+def reader_excel(path: str) -> list[dict]:
+    """Функция считывает данные из Excel-файла и возвращает список словарей с транзакциями"""
+    logger.info("Выполняется чтение данных о транзакциях из Excel-файла")
+    try:
+        df = pd.read_excel(path)
+        return df.to_dict(orient="records")  # Преобразуем DataFrame в список словарей
+    except Exception as e:
+        logger.error(f"Ошибка при чтении Excel-файла: {e}")
+        return []
+
+
 def profitable_cashback(transactions: list[dict[str, Any]], year: int, month: int) -> str | dict[Any, Any]:
-    """Фильтрует транзакции по заданному периоду, исключает приходные операции и рассчитывает кэшбэк."""
+    """Фильтрует транзакции по заданному периоду, исключает приходные операции
+    и рассчитывает кэшбэк."""
     logger.info(f"Обработка транзакций за {month}/{year}")
     try:
         filtered_transactions = []
@@ -41,15 +56,16 @@ def profitable_cashback(transactions: list[dict[str, Any]], year: int, month: in
             logger.warning("Нет подходящих транзакций для расчета кэшбэка")
             return {}
 
-
         def accumulate_expenses(category_totals: dict[str, int], transaction: dict[str, Any]) -> dict[str, int]:
             category = transaction.get("Категория", "Прочее")
             amount = abs(transaction.get("Сумма платежа", 0))
             category_totals[category] += amount
             return category_totals
+
         total_expenses_by_category = reduce(accumulate_expenses, filtered_transactions, defaultdict(int))
-        cashback_by_category = {category: round(amount * 0.01) for category, amount in
-                                total_expenses_by_category.items()}
+        cashback_by_category = {
+            category: round(amount * 0.01) for category, amount in total_expenses_by_category.items()
+        }
         sorted_cashback = dict(sorted(cashback_by_category.items(), key=lambda item: item[1], reverse=True))
         logger.info("Кэшбэк успешно рассчитан")
         return json.dumps(sorted_cashback, ensure_ascii=False, indent=4)

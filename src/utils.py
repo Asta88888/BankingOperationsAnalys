@@ -1,13 +1,11 @@
-import os
-import pandas as pd
-from datetime import datetime
 import json
+import logging
+import os
+from datetime import datetime
+
+import pandas as pd
 import requests
 from dotenv import load_dotenv
-import logging
-from typing import Any
-from collections import defaultdict
-
 
 log_dir = "../logs"
 os.makedirs(log_dir, exist_ok=True)
@@ -28,16 +26,16 @@ path_excel = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "o
 path_json = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "user_settings.json")
 
 
-def reader_excel(path: str) -> list[dict[Any, Any]] | list[Any]:
+def reader_excel(path: str) -> pd.DataFrame:
     """Функция считывает данные excel файла и возвращает
     список словарей с транзакциями"""
     logger.info("Выполняется чтение данных о транзакциях Excel-файла")
     try:
         df = pd.read_excel(path)
-        return df.to_dict(orient="records")
+        return df
     except Exception as e:
         logger.error(f"Ошибка при чтении Excel-файла: {e}")
-        return []
+        return pd.DataFrame()
 
 
 def get_date() -> str:
@@ -47,50 +45,57 @@ def get_date() -> str:
     return current_date
 
 
-def common_cards_info(transactions_list: list[dict]) -> list[dict]:
+def greeting(time_str: str) -> str:
+    """Функция приветствует пользователя, выбирая «Доброе утро» /
+    «Добрый день» / «Добрый вечер» / «Доброй ночи» в зависимости
+    от текущего времени"""
+    try:
+        parsed_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+        hour = parsed_time.hour
+        if 5 <= hour <= 12:
+            return "Доброе утро"
+        elif 13 <= hour <= 18:
+            return "Добрый день"
+        elif 19 <= hour <= 23:
+            return "Добрый вечер"
+        else:
+            return "Доброй ночи"
+    except ValueError:
+        return "Ошибка: неверный формат даты и времени"
+
+
+def common_cards_info(df: pd.DataFrame) -> pd.DataFrame:
     """Функция выдает общую информацию(последние 4 цифры карты;
     общая сумма расходов; кешбэк (1 рубль на каждые 100 рублей))
     по каждой карте"""
     logger.info("Получение информации по каждой карте")
-    cards = []
-    for transaction in transactions_list:
-        try:
-            result = {
-                "last_digits": transaction["Номер карты"],
-                "total_spent": transaction["Сумма операции"],
-                "cashback": round(transaction["Сумма операции"] / 100, 2),
-            }
-            cards.append(result)
-        except KeyError as e:
-            logger.error(f"Отсутствует ключ в данных транзакции: {e}")
+    try:
+        df["cashback"] = df["Сумма операции"] / 100
+        grouped = df.groupby("Номер карты", as_index=False).agg(
+            total_spent=("Сумма операции", "sum"),
+            cashback=("cashback", "sum"),
+        )
+        grouped.rename(columns={"Номер карты": "last_digits"}, inplace=True)
+        return grouped
+    except KeyError as e:
+        logger.error(f"Отсутствует ключ в данных транзакции: {e}")
     logger.info("Получена информация по каждой карте")
-    return cards
+    return pd.DataFrame()
 
 
-def top_five_transactions(transactions_list: list[dict]) -> list[dict]:  # добавить трай эксепт
+def top_five_transactions(df: pd.DataFrame) -> pd.DataFrame:
     """Функция возвращает Топ-5 транзакций по сумме платежа"""
-    top_five_list = []
     logger.info("Получение 5 транзакций по наибольшей сумме")
     try:
-        sorted_transactions = sorted(transactions_list, key=lambda x: abs(x["Сумма платежа"]), reverse=True)
-        for transaction in sorted_transactions:
-            result = {
-                "date": transaction["Дата платежа"],
-                "amount": transaction["Сумма платежа"],
-                "category": transaction["Категория"],
-                "description": transaction["Описание"],
-            }
-            top_five_list.append(result)
-            if len(top_five_list) == 5:
-                break
+        top_five = df.sort_values(by="Сумма платежа", key=abs, ascending=False).head(5)
+        logger.info("Получены 5 транзакций по наибольшей сумме")
+        return top_five[["Дата платежа", "Сумма платежа", "Категория", "Описание"]]
     except KeyError as e:
         logger.error(f"Ошибка в данных транзакций {e}")
-        return []
+        return pd.DataFrame()
     except Exception as e:
         logger.error(f"Ошибка при обработке транзакций {e}")
-        return []
-    logger.info("Получены 5 транзакций по наибольшей сумме")
-    return top_five_list
+        return pd.DataFrame()
 
 
 def exchange_rate(file_path: str) -> dict:
@@ -143,27 +148,14 @@ def stock_price(file_path: str) -> dict:
         return {}
 
 
-def aggregate_by_last_digits(transactions):
-    """Функция дополняет функцию common_cards_info формируя группировку по картам
-    и общей сумме и кэшбэку"""
-    result = defaultdict(lambda: {"total_spent": 0, "cashback": 0})
-
-    for transaction in transactions:
-        last_digits = transaction["last_digits"]
-        result[last_digits]["total_spent"] += transaction["total_spent"]
-        result[last_digits]["cashback"] += transaction["cashback"]
-    return dict(result)
-
-
-# transactions = reader_excel(path_excel)
-# data = common_cards_info(transactions)
-# result = aggregate_by_last_digits(data)
-# print(result)
+# current_time = get_date()
+# print(greeting(current_time))
+# df = reader_excel(path_excel)
+# data_c = common_cards_info(df)
+# data_t = top_five_transactions(df)
 # print(reader_excel(path_excel))
 # print(get_date())
-# print(common_cards_info(transactions))
-# print(top_five_transactions(transactions))
+# print(data_c)
+# print(data_t)
 # print(exchange_rate(path_json))
 # print(stock_price(path_json))
-# data = common_cards_info(transactions)
-
