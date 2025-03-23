@@ -9,10 +9,11 @@ readme = "README.md"
 python = "^3.13"
 python-dotenv = "^1.0.1"
 pandas = "^2.2.3"
+requests = "^2.32.3"
+openpyxl = "^3.1.5"
 
 
 [tool.poetry.group.dev.dependencies]
-requests = "^2.32.3"
 pytest = "^8.3.5"
 pytest-cov = "^6.0.0"
 

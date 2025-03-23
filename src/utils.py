@@ -2,7 +2,6 @@ import json
 import logging
 import os
 from datetime import datetime
-
 import pandas as pd
 import requests
 from dotenv import load_dotenv
@@ -70,6 +69,8 @@ def common_cards_info(df: pd.DataFrame) -> pd.DataFrame:
     по каждой карте"""
     logger.info("Получение информации по каждой карте")
     try:
+        df = df[df["Сумма операции"] > 0].copy()
+        df.loc[:, "cashback"] = df["Сумма операции"] / 100
         df["cashback"] = df["Сумма операции"] / 100
         grouped = df.groupby("Номер карты", as_index=False).agg(
             total_spent=("Сумма операции", "sum"),
@@ -109,7 +110,7 @@ def exchange_rate(file_path: str) -> dict:
         currencies = user_settings.get("user_currencies")
 
         result = {}
-        amount = 100
+        amount = 1
         url = "https://api.apilayer.com/exchangerates_data/convert"
 
         for currency in currencies:
