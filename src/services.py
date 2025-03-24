@@ -74,6 +74,6 @@ def profitable_cashback(transactions: list[dict[str, Any]], year: int, month: in
         return {}
 
 
-transactions = reader_excel_2(path_excel)
-cashback = profitable_cashback(transactions, 2021, 11)
-print(cashback)
+# transactions = reader_excel_2(path_excel)
+# cashback = profitable_cashback(transactions, 2021, 11)
+# print(cashback)
