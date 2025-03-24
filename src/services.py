@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG)
 logger.debug("Debug message")
 
 
-def reader_excel(path: str) -> list[dict]:
+def reader_excel_2(path: str) -> list[dict]:
     """Функция считывает данные из Excel-файла и возвращает список словарей с транзакциями"""
     logger.info("Выполняется чтение данных о транзакциях из Excel-файла")
     try:
@@ -74,6 +74,6 @@ def profitable_cashback(transactions: list[dict[str, Any]], year: int, month: in
         return {}
 
 
-transactions = reader_excel(path_excel)
+transactions = reader_excel_2(path_excel)
 cashback = profitable_cashback(transactions, 2021, 11)
 print(cashback)
