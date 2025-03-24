@@ -3,10 +3,10 @@ from src.reports import spending_by_category
 from src.services import profitable_cashback
 from src.utils import path_excel
 import pandas as pd
-
+from src.utils import reader_excel
 
 def main():
-    transactions_df = pd.read_excel(path_excel)
+    transactions_df = reader_excel(path_excel)
     date = "2021-09-11 13:27:52"
     result_json = get_main_page_info(transactions_df, date)
     print(result_json)

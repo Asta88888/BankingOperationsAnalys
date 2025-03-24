@@ -15,6 +15,7 @@ def get_main_page_info(transactions: pd.DataFrame, date_str: str):
     transactions_filtered = transactions[
         (transactions["Дата платежа"] >= start_of_month) & (transactions["Дата платежа"] <= date)
         ]
+
     cards_info = common_cards_info(transactions_filtered).to_dict(orient="records")
     transactions_info = (
         top_five_transactions(transactions_filtered)
@@ -28,6 +29,7 @@ def get_main_page_info(transactions: pd.DataFrame, date_str: str):
         )
         .to_dict(orient="records")
     )
+
     for transaction in transactions_info:
         transaction["date"] = transaction["date"].strftime("%Y-%m-%d %H:%M:%S")
     currency_rates = exchange_rate(path_json)
@@ -41,6 +43,7 @@ def get_main_page_info(transactions: pd.DataFrame, date_str: str):
         "currency_rates": [{"currency": key, "rate": value} for key, value in currency_rates.items()],
         "stock_prices": [{"stock": key, "price": value} for key, value in stock_prices.items()],
     }
+
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
