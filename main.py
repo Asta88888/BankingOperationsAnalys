@@ -10,9 +10,10 @@ from src.utils import reader_excel
 def main():
     df = pd.read_excel(path_excel)
     transactions = reader_excel_2(path_excel)
-    # date = "2021-09-11 13:27:52"
-    # result_json = get_main_page_info(transactions_df, date)
-    # print(result_json)
+    transactions_df = reader_excel(path_excel)
+    date = "2021-09-11 13:27:52"
+    result_json = get_main_page_info(transactions_df, date)
+    print(result_json)
     # category = "Супермаркеты"
     # df["Дата платежа"] = pd.to_datetime(df["Дата платежа"], format="%d.%m.%Y").dt.strftime("%Y-%m-%d")
     # report = spending_by_category(df, category, date="2021-12-31")
