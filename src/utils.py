@@ -69,7 +69,7 @@ def common_cards_info(df: pd.DataFrame) -> pd.DataFrame:
     по каждой карте"""
     logger.info("Получение информации по каждой карте")
     try:
-        df = df[df["Сумма операции"] > 0].copy()
+        df = df[df["Сумма операции"] < 0].copy()
         df.loc[:, "cashback"] = df["Сумма операции"] / 100
         df["cashback"] = df["Сумма операции"] / 100
         grouped = df.groupby("Номер карты", as_index=False).agg(

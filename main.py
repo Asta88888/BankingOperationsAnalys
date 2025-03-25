@@ -8,18 +8,17 @@ from src.utils import reader_excel
 
 
 def main():
-    df = pd.read_excel(path_excel)
-    transactions = reader_excel_2(path_excel)
     transactions_df = reader_excel(path_excel)
+    transactions = transactions_df.to_dict(orient='records')
     date = "2021-09-11 13:27:52"
     result_json = get_main_page_info(transactions_df, date)
     print(result_json)
-    # category = "Супермаркеты"
-    # df["Дата платежа"] = pd.to_datetime(df["Дата платежа"], format="%d.%m.%Y").dt.strftime("%Y-%m-%d")
-    # report = spending_by_category(df, category, date="2021-12-31")
-    # print(report)
-    # cashback = profitable_cashback(transactions, 2021, 11)
-    # print(cashback)
+    category = "Супермаркеты"
+    transactions_df["Дата платежа"] = pd.to_datetime(transactions_df["Дата платежа"], format="%d.%m.%Y").dt.strftime("%Y-%m-%d")
+    report = spending_by_category(transactions_df, category, date="2021-12-31")
+    print(report)
+    cashback = profitable_cashback(transactions, 2021, 11)
+    print(cashback)
 
 
 if __name__ == "__main__":
